@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">DemoTracker</string>
+    <string name="title_activity_main">Home</string>'
+    <string name="title_activity_distance">Distance</string>
+    <string name="title_activity_maps">Location</string>
+    <string name="button_start">Start Tracking</string>
+    <string name="button_stop">Stop Tracking</string>
+    <string name="button_distance">Show distance</string>
+    <string name="button_location">Show location</string>
+
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="dialog_message">Are you ok that your location is being tracked in the background?</string>
+    <string name="dialog_title">Confirm tracking</string>
+</resources>
