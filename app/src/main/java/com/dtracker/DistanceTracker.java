@@ -1,10 +1,15 @@
 package com.dtracker;
 
 import android.app.Application;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.location.Location;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.util.TypedValue;
 
@@ -19,6 +24,8 @@ import java.util.concurrent.Executors;
  */
 public class DistanceTracker extends Application implements LocationListener {
 
+    public final static String TAG = DistanceTracker.class.getSimpleName();
+
     public static final String PREF_PATH_DISTANCE = "pref_distance";
     public static final String PREF_PATH_ID = "pref_id";
 
@@ -29,6 +36,9 @@ public class DistanceTracker extends Application implements LocationListener {
     public static final String PREF_LOCATION_AUTH_LNG = "pref_lng";
 
     public final static String PREF_TRACKING = "pref_tracking";
+
+    /** Receiver of location service messages */
+    private BroadcastReceiver receiver;
 
     /** Sequential executor */
     private Executor exec;
@@ -43,11 +53,55 @@ public class DistanceTracker extends Application implements LocationListener {
     @Override
     public void onCreate() {
         super.onCreate();
+
         exec = Executors.newSingleThreadExecutor();
+
+        // receive messages from service
+        receiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                //TODO: manage messages from the service
+            }
+        };
+
+        // start tracking if a previous tracking was on
+        if (PreferenceManager.getDefaultSharedPreferences(this)
+                .getBoolean(DistanceTracker.PREF_TRACKING, false))
+
+            startTracking();
     }
 
+    public void startTracking() {
+        LocalBroadcastManager.getInstance(this).registerReceiver(receiver,
+                new IntentFilter(LocationService.ACTION_LOCATION_STATUS_CHANGE));//TODO add filters
+        Intent intent = new Intent(LocationService.ACTION_START_UPDATES, null, this, LocationService.class);
+        startService(intent);
+    }
+
+    public void stopTracking() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver);
+        Intent intent = new Intent(LocationService.ACTION_STOP_UPDATES, null, this, LocationService.class);
+        startService(intent);
+    }
+
+    public synchronized void resetTracking() {
+        PreferenceManager.getDefaultSharedPreferences(this).edit()
+                .remove(PREF_PATH_ID)
+                .remove(PREF_PATH_DISTANCE)
+                .remove(PREF_LOCATION_LAT)
+                .remove(PREF_LOCATION_LNG)
+                .remove(PREF_LOCATION_AUTH_LAT)
+                .remove(PREF_LOCATION_AUTH_LNG)
+                .commit();
+    }
+
+    /**
+     * Listener to the Google Play Services updates
+     *
+     * @param location
+     */
     @Override
-    public void onLocationChanged(Location location) {
+    public synchronized void onLocationChanged(Location location) {
 
         if (location==null || flagAddingPath)
             return;
@@ -75,14 +129,16 @@ public class DistanceTracker extends Application implements LocationListener {
         // if there is at least one location available
         if (lat!=0 && lng!=0) {
 
-            float time = pref.getLong(PREF_LOCATION_TIME, 0);
+            float time = pref.getFloat(PREF_LOCATION_TIME, 0);
 
+            // max speed check
             float d = computeDistanceAndBearing(lat, lng, newlat, newlng, null);
             float speed = d / (newtime - time);
-            Log.d("dTracker", "Distance: "+d+"m; Speed: "+speed+"m/s");
+            Log.d(TAG, "Distance: "+d+"m; Speed: "+speed+"m/s");
             if (speed>maxSpeed)
                 return;
 
+            // retrieve last authoritative location
             float authlat = pref.getFloat(PREF_LOCATION_AUTH_LAT, 0);
             float authlng = pref.getFloat(PREF_LOCATION_AUTH_LNG, 0);
             float authd = computeDistanceAndBearing(authlat, authlng, lat, lng, null);
@@ -99,8 +155,13 @@ public class DistanceTracker extends Application implements LocationListener {
         if (id==0)
             addPath(location);
 
-        pref.edit().putFloat(PREF_LOCATION_LAT, lat).putFloat(PREF_LOCATION_LNG, lng).commit();
-        Log.d("dTracker", location.toString());
+        pref.edit()
+                .putFloat(PREF_LOCATION_TIME, newtime)
+                .putFloat(PREF_LOCATION_LAT, (float) newlat)
+                .putFloat(PREF_LOCATION_LNG, (float) newlng)
+                .commit();
+
+        Log.d(TAG, location.toString());
     }
 
     private void addPath(final Location firstPoint) {
@@ -108,12 +169,14 @@ public class DistanceTracker extends Application implements LocationListener {
         exec.execute(new Runnable() {
             @Override
             public void run() {
-                PathContract.DbHelper helper = PathContract.createHelper(DistanceTracker.this);
-                long id = helper.addPath();
-                helper.addPoint(id, firstPoint.getLatitude(), firstPoint.getLongitude(), 0);
-                PreferenceManager.getDefaultSharedPreferences(DistanceTracker.this).edit()
-                        .putLong(PREF_PATH_ID, id)
-                        .commit();
+                synchronized (DistanceTracker.this) {
+                    PathContract.DbHelper helper = PathContract.createHelper(DistanceTracker.this);
+                    long id = helper.addPath();
+                    helper.addPoint(id, firstPoint.getLatitude(), firstPoint.getLongitude(), 0);
+                    PreferenceManager.getDefaultSharedPreferences(DistanceTracker.this).edit()
+                            .putLong(PREF_PATH_ID, id)
+                            .commit();
+                }
                 flagAddingPath = false;
             }
         });
@@ -123,25 +186,16 @@ public class DistanceTracker extends Application implements LocationListener {
         exec.execute(new Runnable() {
             @Override
             public void run() {
-                PathContract.createHelper(DistanceTracker.this)
-                        .addPoint(id, location.getLatitude(), location.getLongitude(), distance);
-                PreferenceManager.getDefaultSharedPreferences(DistanceTracker.this).edit()
-                        .putFloat(PREF_LOCATION_AUTH_LAT, (float) location.getLatitude())
-                        .putFloat(PREF_LOCATION_AUTH_LNG, (float) location.getLongitude())
-                        .commit();
+                synchronized (DistanceTracker.this) {
+                    PathContract.createHelper(DistanceTracker.this)
+                            .addPoint(id, location.getLatitude(), location.getLongitude(), distance);
+                    PreferenceManager.getDefaultSharedPreferences(DistanceTracker.this).edit()
+                            .putFloat(PREF_LOCATION_AUTH_LAT, (float) location.getLatitude())
+                            .putFloat(PREF_LOCATION_AUTH_LNG, (float) location.getLongitude())
+                            .commit();
+                }
             }
         });
-    }
-
-    public void reset() {
-        PreferenceManager.getDefaultSharedPreferences(this).edit()
-                .remove(PREF_PATH_ID)
-                .remove(PREF_PATH_DISTANCE)
-                .remove(PREF_LOCATION_LAT)
-                .remove(PREF_LOCATION_LNG)
-                .remove(PREF_LOCATION_AUTH_LAT)
-                .remove(PREF_LOCATION_AUTH_LNG)
-                .commit();
     }
 
     //...not used for simplicity

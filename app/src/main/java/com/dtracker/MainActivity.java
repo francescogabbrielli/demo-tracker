@@ -12,6 +12,8 @@ import android.widget.ToggleButton;
 
 public class MainActivity extends AppCompatActivity {
 
+    private DistanceTracker app;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -23,9 +25,10 @@ public class MainActivity extends AppCompatActivity {
 
             ToggleButton bTracking=(ToggleButton)findViewById(R.id.buttonTracking);
             bTracking.setChecked(true);
-//            startTracking();
 
         }
+
+        app = (DistanceTracker) getApplication();
 
     }
 
@@ -73,14 +76,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startTracking() {
-        ((DistanceTracker) getApplication()).reset();
-        Intent intent = new Intent(LocationService.ACTION_START_UPDATES, null, this, LocationService.class);
-        startService(intent);
+        app.resetTracking();
+        app.startTracking();
     }
 
     private void stopTracking() {
-        Intent intent = new Intent(LocationService.ACTION_STOP_UPDATES, null, this, LocationService.class);
-        startService(intent);
+        app.stopTracking();
     }
 
     public void showDistance(View v) {

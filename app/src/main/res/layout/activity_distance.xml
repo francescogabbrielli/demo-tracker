@@ -7,15 +7,46 @@
     tools:context="com.dtracker.DistanceActivity">
 
     <TextView
+        android:id="@+id/distanceLabel"
+        android:textColor="@color/colorAccent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:gravity="center_horizontal"
+        android:textAlignment="center"
+        android:text="@string/distance_label" />
+
+    <TextView
         android:padding="10dp"
         android:id="@+id/distanceTextView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:text="-"
-        tools:layout_alignParentStart="true"
-        tools:layout_alignParentTop="true"
-        android:gravity="center"
+        android:layout_below="@id/distanceLabel"
+        android:layout_alignLeft="@id/distanceLabel"
+        android:gravity="center_horizontal"
         android:textAlignment="center"
         style="@android:style/TextAppearance.Holo.Large"/>
+
+    <TextView
+        android:id="@+id/lastUpdatedLabel"
+        android:textColor="@color/colorAccent"
+        android:layout_marginTop="20dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/distanceTextView"
+        android:layout_alignLeft="@id/distanceTextView"
+        android:text="@string/lastupdate_label" />
+
+    <TextView
+        android:id="@+id/lastUpdatedTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="-"
+        android:layout_below="@id/lastUpdatedLabel"
+        android:layout_alignLeft="@id/lastUpdatedLabel"/>
+
 
 </RelativeLayout>

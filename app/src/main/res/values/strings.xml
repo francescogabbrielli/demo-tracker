@@ -12,4 +12,6 @@
     <string name="no">No</string>
     <string name="dialog_message">Are you ok that your location is being tracked in the background?</string>
     <string name="dialog_title">Confirm tracking</string>
+    <string name="distance_label">Total Distance</string>
+    <string name="lastupdate_label">Last updated</string>
 </resources>
