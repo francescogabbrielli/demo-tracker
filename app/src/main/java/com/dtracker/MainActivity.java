@@ -19,6 +19,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        app = (DistanceTracker) getApplication();
+
         // update UI from a previous launch
         if(PreferenceManager.getDefaultSharedPreferences(app)
                 .getBoolean(DistanceTracker.PREF_TRACKING,false)) {
@@ -27,8 +29,6 @@ public class MainActivity extends AppCompatActivity {
             bTracking.setChecked(true);
 
         }
-
-        app = (DistanceTracker) getApplication();
 
     }
 
