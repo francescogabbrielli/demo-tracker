@@ -15,6 +15,7 @@ import android.util.TypedValue;
 
 import com.google.android.gms.location.LocationListener;
 
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -27,13 +28,15 @@ public class DistanceTracker extends Application implements LocationListener {
     public final static String TAG = DistanceTracker.class.getSimpleName();
 
     public static final String PREF_PATH_DISTANCE = "pref_distance";
-    public static final String PREF_PATH_ID = "pref_id";
+    public static final String PREF_PATH_ID = "pref_path_id";
+    public static final String PREF_PATH_LEN = "pref_path_len";
 
     public static final String PREF_LOCATION_TIME = "pref_time";
     public static final String PREF_LOCATION_LAT = "pref_lat";
     public static final String PREF_LOCATION_LNG = "pref_lng";
-    public static final String PREF_LOCATION_AUTH_LAT = "pref_lat";
-    public static final String PREF_LOCATION_AUTH_LNG = "pref_lng";
+    public static final String PREF_LOCATION_AUTH_LAT = "pref_auth_lat";
+    public static final String PREF_LOCATION_AUTH_LNG = "pref_auth_lng";
+    public static final String PREF_LOCATION_AUTH_TIME = "pref_auth_time";
 
     public final static String PREF_TRACKING = "pref_tracking";
 
@@ -43,9 +46,13 @@ public class DistanceTracker extends Application implements LocationListener {
     /** Sequential executor */
     private Executor exec;
 
-    //------------------------------ Temporary flags ------------------------------
+    // configuration constants
+    float maxSpeed, minSpeed, minDistance;
+
+    //------------------------------ Temporary vars ------------------------------
     //
     private boolean flagAddingPath;
+    private Location overspeedLocation;
     //
     //------------------------ TODO: evolve with ThreadLocal? ---------------------
 
@@ -54,6 +61,16 @@ public class DistanceTracker extends Application implements LocationListener {
     public void onCreate() {
         super.onCreate();
 
+        // retrieve configuration
+        TypedValue typedValue = new TypedValue();
+        getResources().getValue(R.dimen.max_speed, typedValue, true);
+        maxSpeed = typedValue.getFloat();
+        getResources().getValue(R.dimen.min_speed, typedValue, true);
+        minSpeed = typedValue.getFloat();
+        getResources().getValue(R.dimen.min_distance, typedValue, true);
+        minDistance = typedValue.getFloat();
+
+        // thread for db operations
         exec = Executors.newSingleThreadExecutor();
 
         // receive messages from service
@@ -64,7 +81,7 @@ public class DistanceTracker extends Application implements LocationListener {
             }
         };
 
-        // start tracking if a previous tracking was on
+        // (re)start tracking if a previous tracking was on
         if (PreferenceManager.getDefaultSharedPreferences(this)
                 .getBoolean(DistanceTracker.PREF_TRACKING, false))
 
@@ -88,6 +105,7 @@ public class DistanceTracker extends Application implements LocationListener {
         PreferenceManager.getDefaultSharedPreferences(this).edit()
                 .remove(PREF_PATH_ID)
                 .remove(PREF_PATH_DISTANCE)
+                .remove(PREF_PATH_LEN)
                 .remove(PREF_LOCATION_LAT)
                 .remove(PREF_LOCATION_LNG)
                 .remove(PREF_LOCATION_AUTH_LAT)
@@ -106,15 +124,6 @@ public class DistanceTracker extends Application implements LocationListener {
         if (location==null || flagAddingPath)
             return;
 
-        // retrieve configuration
-        TypedValue typedValue = new TypedValue();
-        getResources().getValue(R.dimen.max_speed, typedValue, true);
-        float maxSpeed = typedValue.getFloat();
-        getResources().getValue(R.dimen.min_speed, typedValue, true);
-        float minSpeed = typedValue.getFloat();
-        getResources().getValue(R.dimen.min_distance, typedValue, true);
-        float minDistance = typedValue.getFloat();
-
         // new values
         double newlat = location.getLatitude();
         double newlng = location.getLongitude();
@@ -123,6 +132,7 @@ public class DistanceTracker extends Application implements LocationListener {
         // stored values
         SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
         long id = pref.getLong(PREF_PATH_ID, 0);
+        int len = pref.getInt(PREF_PATH_LEN, 0);
         float lat = pref.getFloat(PREF_LOCATION_LAT, 0);
         float lng = pref.getFloat(PREF_LOCATION_LNG, 0);
 
@@ -130,26 +140,35 @@ public class DistanceTracker extends Application implements LocationListener {
         if (lat!=0 && lng!=0) {
 
             float time = pref.getFloat(PREF_LOCATION_TIME, 0);
+            if (newtime==time)
+                return;
 
-            // max speed check
             float d = computeDistanceAndBearing(lat, lng, newlat, newlng, null);
             float speed = d / (newtime - time);
             Log.d(TAG, "Distance: "+d+"m; Speed: "+speed+"m/s");
-            if (speed>maxSpeed)
-                return;
 
             // retrieve last authoritative location
             float authlat = pref.getFloat(PREF_LOCATION_AUTH_LAT, 0);
             float authlng = pref.getFloat(PREF_LOCATION_AUTH_LNG, 0);
+            float authtime = pref.getFloat(PREF_LOCATION_AUTH_TIME, 0);
             float authd = computeDistanceAndBearing(authlat, authlng, lat, lng, null);
-            boolean authOk = (authlat!=0 && authlng!=0) && authd>minDistance;
+            float authspeed = authd / (newtime-authtime);
+            boolean authOk = (authlat!=0 && authlng!=0) && authd>minDistance && authspeed<maxSpeed;
+
+            // max speed check
+            if(!checkMaxSpeed(location, speed, id, len, authd))
+                return;
 
             // update distance
             if (authOk || speed>minSpeed) {
                 float distance = pref.getFloat(PREF_PATH_DISTANCE, 0) + (authOk ? authd : d);
                 addPoint(id, location, distance);
-                pref.edit().putFloat(PREF_PATH_DISTANCE, distance).commit();
+                pref.edit()
+                        .putInt(PREF_PATH_LEN, len+1)
+                        .putFloat(PREF_PATH_DISTANCE, distance)
+                        .commit();
             }
+
         }
 
         if (id==0)
@@ -164,6 +183,23 @@ public class DistanceTracker extends Application implements LocationListener {
         Log.d(TAG, location.toString());
     }
 
+    private boolean checkMaxSpeed(Location location, float speed, long pathId, int pathLen, float authDistance) {
+        if (speed>maxSpeed) {
+            // considering that the first point can be a mistake
+            if (pathLen==1) {
+                //correction
+                if (overspeedLocation!=null && overspeedLocation.distanceTo(location)<authDistance) {
+                    //TODO: remove first point
+                    addPoint(pathId, location, 0);
+                } else
+                    overspeedLocation = location;
+            }
+            return false;
+        }
+        overspeedLocation = null;
+        return true;
+    }
+
     private void addPath(final Location firstPoint) {
         flagAddingPath = true;
         exec.execute(new Runnable() {
@@ -175,6 +211,7 @@ public class DistanceTracker extends Application implements LocationListener {
                     helper.addPoint(id, firstPoint.getLatitude(), firstPoint.getLongitude(), 0);
                     PreferenceManager.getDefaultSharedPreferences(DistanceTracker.this).edit()
                             .putLong(PREF_PATH_ID, id)
+                            .putInt(PREF_PATH_LEN, 1)
                             .commit();
                 }
                 flagAddingPath = false;
@@ -190,6 +227,7 @@ public class DistanceTracker extends Application implements LocationListener {
                     PathContract.createHelper(DistanceTracker.this)
                             .addPoint(id, location.getLatitude(), location.getLongitude(), distance);
                     PreferenceManager.getDefaultSharedPreferences(DistanceTracker.this).edit()
+                            .putFloat(PREF_LOCATION_AUTH_TIME, SystemClock.elapsedRealtime()*0.001f)
                             .putFloat(PREF_LOCATION_AUTH_LAT, (float) location.getLatitude())
                             .putFloat(PREF_LOCATION_AUTH_LNG, (float) location.getLongitude())
                             .commit();
