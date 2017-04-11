@@ -38,6 +38,7 @@ public class DistanceTracker extends Application implements LocationListener {
     public static final String PREF_LOCATION_AUTH_LNG = "pref_auth_lng";
     public static final String PREF_LOCATION_AUTH_TIME = "pref_auth_time";
 
+    public final static String PREF_ALLOW_TRACKING = "pref_allow_tracking";
     public final static String PREF_TRACKING = "pref_tracking";
 
     /** Receiver of location service messages */

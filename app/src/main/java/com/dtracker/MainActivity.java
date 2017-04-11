@@ -20,8 +20,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // update UI from a previous launch
-        if(PreferenceManager.getDefaultSharedPreferences(
-                getApplication()).getBoolean(DistanceTracker.PREF_TRACKING,false)) {
+        if(PreferenceManager.getDefaultSharedPreferences(app)
+                .getBoolean(DistanceTracker.PREF_TRACKING,false)) {
 
             ToggleButton bTracking=(ToggleButton)findViewById(R.id.buttonTracking);
             bTracking.setChecked(true);
@@ -34,8 +34,8 @@ public class MainActivity extends AppCompatActivity {
 
     public void toggleTracking(View v) {
         final ToggleButton toggleButton = (ToggleButton) v;
-        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplication());
-        boolean allowed = prefs.getBoolean(DistanceTracker.PREF_TRACKING, false);
+        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(app);
+        boolean allowed = prefs.getBoolean(DistanceTracker.PREF_ALLOW_TRACKING, false);
 
         if (!toggleButton.isChecked()) {
             stopTracking();
@@ -53,7 +53,9 @@ public class MainActivity extends AppCompatActivity {
                 public void onClick(DialogInterface dialog, int which) {
                     switch (which) {
                         case DialogInterface.BUTTON_POSITIVE:
-                            prefs.edit().putBoolean(DistanceTracker.PREF_TRACKING, true).apply();
+                            prefs.edit()
+                                    .putBoolean(DistanceTracker.PREF_ALLOW_TRACKING, true)
+                                    .apply();
                             startTracking();
                             break;
 
@@ -76,11 +78,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startTracking() {
+        PreferenceManager.getDefaultSharedPreferences(app).edit()
+                .putBoolean(DistanceTracker.PREF_TRACKING, true)
+                .apply();
         app.resetTracking();
         app.startTracking();
     }
 
     private void stopTracking() {
+        PreferenceManager.getDefaultSharedPreferences(app).edit()
+                .putBoolean(DistanceTracker.PREF_TRACKING, false)
+                .apply();
         app.stopTracking();
     }
 
