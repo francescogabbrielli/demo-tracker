@@ -3,13 +3,14 @@ package com.dtracker;
 import android.Manifest;
 import android.app.Service;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
-import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Parcelable;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -22,6 +23,7 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
@@ -29,6 +31,9 @@ import com.google.android.gms.location.LocationSettingsResult;
 import com.google.android.gms.location.LocationSettingsStates;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 
+/**
+ * Background Location Service that stays always on when requesting scheduled updates
+ */
 public class LocationService extends Service implements
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
@@ -64,12 +69,14 @@ public class LocationService extends Service implements
     /** Current location request */
     private LocationRequest request;
 
-    private boolean updating, autoStart;
+    //TODO: remove because auto-start should be the only expected flow
+    /** Temporary flag for starting the updates soon after the connection */
+    private boolean flagAutoStart;
 
     @Override
     public void onCreate() {
         // Create an instance of GoogleAPIClient.
-        Log.i(TAG, "Creating Location Service");
+        Log.v(TAG, "Creating Location Service");
         if (googleApiClient == null)
             googleApiClient = new GoogleApiClient.Builder(this)
                     .addConnectionCallbacks(this)
@@ -80,18 +87,18 @@ public class LocationService extends Service implements
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.i(TAG, "Request: " + intent);
+        Log.v(TAG, "Request: " + intent);
         if (intent==null || ACTION_START_SERVICE.equals(intent.getAction())) {
-            Log.i(TAG, "request connect");
+            Log.d(TAG, "Action connect!");
             connect();
         } else if (ACTION_START_UPDATES.equals(intent.getAction())) {
-            Log.i(TAG, "request start updates");
+            Log.d(TAG, "Action start updates!");
             startUpdates();
         } else if (ACTION_STOP_UPDATES.equals(intent.getAction())) {
-            Log.i(TAG, "request stop updates");
+            Log.d(TAG, "Action stop updates!");
             stopUpdates();
         } else {
-            Log.w(TAG, "unknown action: "+intent.getAction());
+            Log.w(TAG, "Unknown action: "+intent.getAction());
             //connect();???
         }
         return START_STICKY;
@@ -104,8 +111,9 @@ public class LocationService extends Service implements
     }
 
     private void connect() {
+        Log.v(TAG, "Trying to connect to google API...");
         LocationManager lm = (LocationManager) getSystemService(LOCATION_SERVICE);
-        if (lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) || lm.isProviderEnabled(LocationManager.GPS_PROVIDER))
+//        if (lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) || lm.isProviderEnabled(LocationManager.GPS_PROVIDER))
             if (!googleApiClient.isConnected() && !googleApiClient.isConnecting())
                 googleApiClient.connect();
     }
@@ -113,25 +121,27 @@ public class LocationService extends Service implements
     @Override
     public synchronized void onConnected(@Nullable Bundle bundle) {
 
-        Log.i(TAG, "CONNECTED!");
+        Log.d(TAG, "CONNECTED!");
 
         if (ActivityCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 || ActivityCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 
-            Location lastLocation = LocationServices.FusedLocationApi.getLastLocation(
-                    googleApiClient);
-
             //create request
+            SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplication());
             request = new LocationRequest();
-            request.setInterval(10000);
-            request.setFastestInterval(5000);
+            request.setInterval(pref.getInt(
+                    DistanceTracker.PREF_GPS_INTERVAL,
+                    getResources().getInteger(R.integer.gps_interval)));
+            request.setFastestInterval(pref.getInt(
+                    DistanceTracker.PREF_GPS_FASTEST_INTERVAL,
+                    getResources().getInteger(R.integer.gps_fastest_interval)));
             request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
             sendChange(true);
 
-            if(autoStart)
+            if(flagAutoStart)
                 startUpdates();
 
         } else {
@@ -145,7 +155,7 @@ public class LocationService extends Service implements
     @Override
     public synchronized void onConnectionSuspended(int cause) {
 
-        Log.i(TAG, "DISCONNECTED!");
+        Log.d(TAG, "DISCONNECTED!");
 
         switch(cause) {
             case GoogleApiClient.ConnectionCallbacks.CAUSE_NETWORK_LOST:
@@ -183,17 +193,11 @@ public class LocationService extends Service implements
 
     private synchronized void startUpdates() {
 
-        if (updating)
-            return;
-
         if (request==null) {
-            autoStart = true;
+            flagAutoStart = true;
             connect();
             return;
         }
-
-        autoStart = false;
-        updating = true;
 
         LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
                 .addLocationRequest(request);
@@ -207,16 +211,19 @@ public class LocationService extends Service implements
     }
 
     private synchronized void stopUpdates() {
-        updating = false;
+        if (googleApiClient!=null && googleApiClient.isConnected())
+            LocationServices.FusedLocationApi.removeLocationUpdates(
+                    googleApiClient, (LocationListener) getApplication());
+        stopSelf();
     }
 
     @Override
     public void onResult(@NonNull LocationSettingsResult result) {
         final Status status = result.getStatus();
         final LocationSettingsStates states = result.getLocationSettingsStates();
-        Log.i(TAG, status.getStatusCode()
-                +"="+status.getStatusMessage()
-                +": "+states.isGpsPresent()+"/"+states.isGpsUsable());
+        Log.d(TAG, "Google API RESULT: "+status.getStatusCode()
+                +" -> "+status.getStatusMessage()
+                +" (GPS"+(states.isGpsPresent()?" present":" ")+(states.isGpsUsable()?"usable":"")+")");
         switch (status.getStatusCode()) {
             case LocationSettingsStatusCodes.SUCCESS:
                 requestLocation();
@@ -225,11 +232,10 @@ public class LocationService extends Service implements
                 sendAction(ACTION_REQUEST_RESOLUTION, status);
                 break;
             case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
-                Toast.makeText(this, "Please change your settings to enable location management in this app", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, R.string.settings_change_unavailable, Toast.LENGTH_LONG).show();
                 stopSelf();
                 break;
         }
-
     }
 
     private void requestLocation() {
@@ -239,7 +245,7 @@ public class LocationService extends Service implements
                 || ActivityCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 
-            Log.i(TAG, "request location updates");
+            Log.d(TAG, "Request location updates");
             LocationServices.FusedLocationApi.requestLocationUpdates(
                     googleApiClient, request, (DistanceTracker) getApplication());
 
@@ -251,7 +257,7 @@ public class LocationService extends Service implements
 
     @Override
     public void onDestroy() {
-        Log.i(TAG, "Destroying Location Service");
+        Log.v(TAG, "Destroying Location Service");
         request = null;
         sendChange(false);
         googleApiClient.disconnect();

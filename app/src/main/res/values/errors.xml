@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_change_unavailable">Please change your settings to enable location management in this app</string>
+    <string name="cannot_activate_gps">Sorry, cannot activate GPS</string>
+    <string name="cancel_activate_gps">GPS activation was canceled</string>
+</resources>

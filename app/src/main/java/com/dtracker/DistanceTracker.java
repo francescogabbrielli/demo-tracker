@@ -41,6 +41,9 @@ public class DistanceTracker extends Application implements LocationListener {
     public final static String PREF_ALLOW_TRACKING = "pref_allow_tracking";
     public final static String PREF_TRACKING = "pref_tracking";
 
+    public final static String PREF_GPS_INTERVAL = "pref_gps_interval";
+    public final static String PREF_GPS_FASTEST_INTERVAL = "pref_gps_fastest_interval";
+
     /** Receiver of location service messages */
     private BroadcastReceiver receiver;
 
@@ -60,6 +63,7 @@ public class DistanceTracker extends Application implements LocationListener {
 
     @Override
     public void onCreate() {
+
         super.onCreate();
 
         // retrieve configuration
@@ -74,14 +78,6 @@ public class DistanceTracker extends Application implements LocationListener {
         // thread for db operations
         exec = Executors.newSingleThreadExecutor();
 
-        // receive messages from service
-        receiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                //TODO: manage messages from the service
-            }
-        };
-
         // (re)start tracking if a previous tracking was on
         if (PreferenceManager.getDefaultSharedPreferences(this)
                 .getBoolean(DistanceTracker.PREF_TRACKING, false))
@@ -90,14 +86,14 @@ public class DistanceTracker extends Application implements LocationListener {
     }
 
     public void startTracking() {
-        LocalBroadcastManager.getInstance(this).registerReceiver(receiver,
-                new IntentFilter(LocationService.ACTION_LOCATION_STATUS_CHANGE));//TODO add filters
+//        LocalBroadcastManager.getInstance(this).registerReceiver(receiver,
+//                new IntentFilter(LocationService.ACTION_LOCATION_STATUS_CHANGE));//TODO add filters
         Intent intent = new Intent(LocationService.ACTION_START_UPDATES, null, this, LocationService.class);
         startService(intent);
     }
 
     public void stopTracking() {
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver);
+//        LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver);
         Intent intent = new Intent(LocationService.ACTION_STOP_UPDATES, null, this, LocationService.class);
         startService(intent);
     }
@@ -109,8 +105,10 @@ public class DistanceTracker extends Application implements LocationListener {
                 .remove(PREF_PATH_LEN)
                 .remove(PREF_LOCATION_LAT)
                 .remove(PREF_LOCATION_LNG)
+                .remove(PREF_LOCATION_TIME)
                 .remove(PREF_LOCATION_AUTH_LAT)
                 .remove(PREF_LOCATION_AUTH_LNG)
+                .remove(PREF_LOCATION_AUTH_TIME)
                 .commit();
     }
 

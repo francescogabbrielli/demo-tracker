@@ -29,21 +29,23 @@ public class PathContract {
         public static final String COLUMN_NAME_DIST = "dist";
     }
 
-    private static final String SQL_CREATE_ENTRIES =
+    private static final String SQL_CREATE_ENTRIES[] = new String[]{
             "CREATE TABLE " + Path.TABLE_NAME + " (" +
                     Path._ID + " INTEGER PRIMARY KEY," +
                     Path.COLUMN_NAME_BEGIN + " INTEGER," +
-                    Path.COLUMN_NAME_END + " INTEGER);" +
-                    "CREATE TABLE " + PathPoints.TABLE_NAME + " ("+
-                        PathPoints._ID + " INTEGER PRIMARY KEY," +
-                        PathPoints.COLUMN_NAME_PATH_ID + " INTEGER," +
-                        PathPoints.COLUMN_NAME_LAT + " REAL," +
-                        PathPoints.COLUMN_NAME_LNG + " REAL," +
-                        PathPoints.COLUMN_NAME_DIST+ " REAL)";
+                    Path.COLUMN_NAME_END + " INTEGER)",
+            "CREATE TABLE " + PathPoints.TABLE_NAME + " (" +
+                    PathPoints._ID + " INTEGER PRIMARY KEY," +
+                    PathPoints.COLUMN_NAME_PATH_ID + " INTEGER," +
+                    PathPoints.COLUMN_NAME_LAT + " REAL," +
+                    PathPoints.COLUMN_NAME_LNG + " REAL," +
+                    PathPoints.COLUMN_NAME_DIST + " REAL)"
+    };
 
-    private static final String SQL_DELETE_ENTRIES =
-            "DROP TABLE IF EXISTS " + PathPoints.TABLE_NAME+";" +
-                    "DROP TABLE IF EXISTS " + Path.TABLE_NAME;
+    private static final String[] SQL_DELETE_ENTRIES = new String[]{
+            "DROP TABLE IF EXISTS " + PathPoints.TABLE_NAME,
+            "DROP TABLE IF EXISTS " + Path.TABLE_NAME
+    };
 
     public static DbHelper createHelper(Context context) {
         return new DbHelper(context);
@@ -59,14 +61,16 @@ public class PathContract {
         }
 
         public void onCreate(SQLiteDatabase db) {
-            db.execSQL(SQL_CREATE_ENTRIES);
+            for (String sql : SQL_CREATE_ENTRIES)
+                db.execSQL(sql);
         }
 
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
             // This database is only a cache for online data, so its upgrade policy is
             // to simply to discard the data and start over.
             // TODO: Change this to upgrade without destroying the data
-            db.execSQL(SQL_DELETE_ENTRIES);
+            for (String sql : SQL_DELETE_ENTRIES)
+                db.execSQL(sql);
             onCreate(db);
         }
 
@@ -81,6 +85,7 @@ public class PathContract {
          *      the path id
          */
         public long addPath() {
+
             SQLiteDatabase db = getWritableDatabase();
 
             // Create a new map of values, where column names are the keys
@@ -106,6 +111,7 @@ public class PathContract {
          *      the point id
          */
         public long addPoint(long id, double lat, double lng, float dist) {
+
             SQLiteDatabase db = getWritableDatabase();
 
             // Create a new map of values, where column names are the keys

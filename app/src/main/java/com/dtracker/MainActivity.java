@@ -10,7 +10,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.ToggleButton;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends LocalActivity {
 
     private DistanceTracker app;
 
@@ -23,13 +23,25 @@ public class MainActivity extends AppCompatActivity {
 
         // update UI from a previous launch
         if(PreferenceManager.getDefaultSharedPreferences(app)
-                .getBoolean(DistanceTracker.PREF_TRACKING,false)) {
+                .getBoolean(DistanceTracker.PREF_TRACKING, false)) {
 
             ToggleButton bTracking=(ToggleButton)findViewById(R.id.buttonTracking);
             bTracking.setChecked(true);
 
         }
 
+    }
+
+    @Override
+    protected void onGpsEnabled(boolean enabled) {
+        super.onGpsEnabled(enabled);
+        if (enabled) {
+            startTracking();
+        } else {
+            stopTracking();
+            ToggleButton toggleButton = (ToggleButton) findViewById(R.id.buttonTracking);
+            toggleButton.setChecked(false);
+        }
     }
 
     public void toggleTracking(View v) {
@@ -65,6 +77,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             };
+
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setMessage(R.string.dialog_message)
                     .setTitle(R.string.dialog_title)

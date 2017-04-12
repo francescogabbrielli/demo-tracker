@@ -16,7 +16,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-public class DistanceActivity extends AppCompatActivity implements Runnable {
+public class DistanceActivity extends LocalActivity implements Runnable {
 
     private ScheduledFuture scheduled;
     private ScheduledExecutorService scheduler;

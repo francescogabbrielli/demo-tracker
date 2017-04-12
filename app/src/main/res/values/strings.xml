@@ -8,6 +8,8 @@
     <string name="button_distance">Show distance</string>
     <string name="button_location">Show location</string>
 
+    <string name="activate_gps">Activate GPS?</string>
+
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="dialog_message">Are you ok that your location is being tracked in the background?</string>

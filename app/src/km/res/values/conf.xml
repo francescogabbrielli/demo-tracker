@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <integer name="gps_interval">10000</integer>
+    <integer name="gps_fastest_interval">3333</integer>
     <string name="measure_unit">%.2fKm</string>
     <item name="measure_factor" type="dimen" format="float">0.001</item>
     <item name="min_speed" type="dimen" format="float">2</item>
