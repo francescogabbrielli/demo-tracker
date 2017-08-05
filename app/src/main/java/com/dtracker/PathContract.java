@@ -92,8 +92,16 @@ public class PathContract {
             ContentValues values = new ContentValues();
             values.put(Path.COLUMN_NAME_BEGIN, SystemClock.elapsedRealtime());
 
-            // Insert the new row, returning the primary key value of the new row
-            return db.insert(Path.TABLE_NAME, null, values);
+            db.beginTransaction();
+            try {
+                // Insert the new row, returning the primary key value of the new row
+                long id = db.insert(Path.TABLE_NAME, null, values);
+                db.setTransactionSuccessful();
+                return id;
+            } finally {
+                db.endTransaction();
+            }
+
         }
 
         /**
@@ -122,7 +130,14 @@ public class PathContract {
             values.put(PathPoints.COLUMN_NAME_DIST, dist);
 
             // Insert the new row, returning the primary key value of the new row
-            return db.insert(PathPoints.TABLE_NAME, null, values);
+            db.beginTransaction();
+            try {
+                long pid = db.insert(PathPoints.TABLE_NAME, null, values);
+                db.setTransactionSuccessful();
+                return pid;
+            } finally {
+                db.endTransaction();
+            }
 
         }
     }

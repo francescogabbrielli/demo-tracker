@@ -2,14 +2,11 @@ package com.dtracker;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.widget.Toast;
@@ -21,6 +18,9 @@ public abstract class LocalActivity extends AppCompatActivity {
 
     public final static int REQUEST_RESOLUTION_GPS = 1;
 
+    public final static int REQUEST_PERMISSION_LOCATION = 1;
+
+
     /** Receiver of location service messages */
     protected BroadcastReceiver receiver;
 
@@ -28,7 +28,9 @@ public abstract class LocalActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
+
         // receive messages from the background service
         receiver = new BroadcastReceiver() {
             @Override
@@ -40,17 +42,19 @@ public abstract class LocalActivity extends AppCompatActivity {
                         try {
                             status.startResolutionForResult(LocalActivity.this, REQUEST_RESOLUTION_GPS);
                         } catch(Exception e) {
-                            onGpsEnabled(false);
+                            onGpsResolved(false);
                             Toast.makeText(LocalActivity.this, R.string.cannot_activate_gps, Toast.LENGTH_LONG).show();
                             Log.e(DistanceTracker.TAG, getString(R.string.cannot_activate_gps), e);
                         }
                 }
             }
         };
+
         filter = new IntentFilter();
         filter.addAction(LocationService.ACTION_LOCATION_STATUS_CHANGE);
-        filter.addAction(LocationService.ACTION_REQUEST_PERMISSION);
+//        filter.addAction(LocationService.ACTION_REQUEST_PERMISSION);
         filter.addAction(LocationService.ACTION_REQUEST_RESOLUTION);
+
     }
 
     @Override
@@ -59,9 +63,9 @@ public abstract class LocalActivity extends AppCompatActivity {
         switch (requestCode) {
             case REQUEST_RESOLUTION_GPS:
                 if (resultCode==RESULT_OK) {
-                    onGpsEnabled(true);
+                    onGpsResolved(true);
                 } else {
-                    onGpsEnabled(false);
+                    onGpsResolved(false);
                     Toast.makeText(LocalActivity.this, R.string.cancel_activate_gps, Toast.LENGTH_LONG).show();
                     Log.w(DistanceTracker.TAG, getString(R.string.cancel_activate_gps));
                 }
@@ -75,9 +79,10 @@ public abstract class LocalActivity extends AppCompatActivity {
      * @param enabled
      *              GPS enabled status
      */
-    protected void onGpsEnabled(boolean enabled) {
-        PreferenceManager.getDefaultSharedPreferences(getApplicationContext())
-                .edit().putBoolean(DistanceTracker.PREF_ALLOW_TRACKING, enabled).apply();
+    protected void onGpsResolved(boolean enabled) {
+        Log.d("GPS", enabled?"Enabled":"Disabled");
+//        PreferenceManager.getDefaultSharedPreferences(getApplicationContext())
+//                .edit().putBoolean(DistanceTracker.PREF_ALLOW_TRACKING, enabled).apply();
     }
 
     @Override

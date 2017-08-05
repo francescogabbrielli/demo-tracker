@@ -2,7 +2,4 @@
 <resources>
     <string name="measure_unit">Mi</string>
     <item name="measure_factor" type="dimen" format="float">0.000624</item>
-    <item name="min_speed" type="dimen" format="float">2</item>
-    <item name="max_speed" type="dimen" format="float">15</item>
-    <item name="min_distance" type="dimen" format="float">25</item>
 </resources>

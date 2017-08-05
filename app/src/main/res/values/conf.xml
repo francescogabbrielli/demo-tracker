@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- gps intervals in ms -->
+    <integer name="gps_interval">10000</integer>
+    <integer name="gps_fastest_interval">3333</integer>
+
+    <!-- speed/distance thresholds in m/s -->
+    <item name="min_speed" type="dimen" format="float">2</item>
+    <item name="max_speed" type="dimen" format="float">15</item>
+    <item name="min_distance" type="dimen" format="float">25</item>
+
+</resources>

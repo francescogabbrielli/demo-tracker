@@ -123,10 +123,10 @@ public class LocationService extends Service implements
 
         Log.d(TAG, "CONNECTED!");
 
-        if (ActivityCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                || ActivityCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+//        if (ActivityCompat.checkSelfPermission(this,
+//                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+//                || ActivityCompat.checkSelfPermission(this,
+//                Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 
             //create request
             SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplication());
@@ -144,11 +144,11 @@ public class LocationService extends Service implements
             if(flagAutoStart)
                 startUpdates();
 
-        } else {
-
-            sendAction(ACTION_REQUEST_PERMISSION);
-
-        }
+//        } else {
+//
+//            sendAction(ACTION_REQUEST_PERMISSION);
+//
+//        }
 
     }
 
@@ -214,6 +214,7 @@ public class LocationService extends Service implements
         if (googleApiClient!=null && googleApiClient.isConnected())
             LocationServices.FusedLocationApi.removeLocationUpdates(
                     googleApiClient, (LocationListener) getApplication());
+        Log.d(TAG, "END CONNECTION!");
         stopSelf();
     }
 
@@ -250,6 +251,7 @@ public class LocationService extends Service implements
                     googleApiClient, request, (DistanceTracker) getApplication());
 
         } else {
+            Log.w(TAG, "Unexpected permission request from service!");
             sendAction(ACTION_REQUEST_PERMISSION);
         }
 

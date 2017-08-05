@@ -2,14 +2,11 @@ package com.dtracker;
 
 import android.app.Application;
 import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.location.Location;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.util.TypedValue;
 
@@ -150,6 +147,7 @@ public class DistanceTracker extends Application implements LocationListener {
             float authlat = pref.getFloat(PREF_LOCATION_AUTH_LAT, 0);
             float authlng = pref.getFloat(PREF_LOCATION_AUTH_LNG, 0);
             float authtime = pref.getFloat(PREF_LOCATION_AUTH_TIME, 0);
+            //TODO: include altitude?
             float authd = computeDistanceAndBearing(authlat, authlng, lat, lng, null);
             float authspeed = authd / (newtime-authtime);
             boolean authOk = (authlat!=0 && authlng!=0) && authd>minDistance && authspeed<maxSpeed;
@@ -235,7 +233,12 @@ public class DistanceTracker extends Application implements LocationListener {
         });
     }
 
-    //...not used for simplicity
+
+//--------------------------------------------------------------------------------------------------
+// Copied from android.location.Location
+//
+//
+    //NB ...not used for simplicity
     private static class BearingDistanceCache {
         private double mLat1 = 0.0;
         private double mLon1 = 0.0;
@@ -351,5 +354,7 @@ public class DistanceTracker extends Application implements LocationListener {
 
         return distance;
     }
-
+//
+//
+//--------------------------------------------------------------------------------------------------
 }
