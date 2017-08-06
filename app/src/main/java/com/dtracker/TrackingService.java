@@ -5,7 +5,6 @@ import android.app.Service;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -34,12 +33,12 @@ import com.google.android.gms.location.LocationSettingsStatusCodes;
 /**
  * Background Location Service that stays always on when requesting scheduled updates
  */
-public class LocationService extends Service implements
+public class TrackingService extends Service implements
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
         ResultCallback<LocationSettingsResult> {
 
-    private final static String TAG = LocationService.class.getSimpleName();
+    private final static String TAG = TrackingService.class.getSimpleName();
 
     /** Broadcast action to request for permissions */
     public final static String ACTION_REQUEST_PERMISSION = "action_request_permission";
@@ -89,7 +88,8 @@ public class LocationService extends Service implements
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.v(TAG, "Request: " + intent);
         if (intent==null || ACTION_START_SERVICE.equals(intent.getAction())) {
-            Log.d(TAG, "Action connect!");
+            Log.w(TAG, "Action re-connect?");
+            flagAutoStart = true;
             connect();
         } else if (ACTION_START_UPDATES.equals(intent.getAction())) {
             Log.d(TAG, "Action start updates!");

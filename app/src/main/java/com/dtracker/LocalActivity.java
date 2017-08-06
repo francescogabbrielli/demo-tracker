@@ -36,8 +36,8 @@ public abstract class LocalActivity extends AppCompatActivity {
             @Override
             public void onReceive(Context context, Intent intent) {
                 Log.d(DistanceTracker.TAG, intent.getAction() + " " + intent.getExtras().toString());
-                if (LocationService.ACTION_REQUEST_RESOLUTION.equals(intent.getAction())) {
-                    Status status = intent.getParcelableExtra(LocationService.KEY_PARAM+"_1");
+                if (TrackingService.ACTION_REQUEST_RESOLUTION.equals(intent.getAction())) {
+                    Status status = intent.getParcelableExtra(TrackingService.KEY_PARAM+"_1");
                     if (status.getStatusCode()== LocationSettingsStatusCodes.RESOLUTION_REQUIRED)
                         try {
                             status.startResolutionForResult(LocalActivity.this, REQUEST_RESOLUTION_GPS);
@@ -51,9 +51,9 @@ public abstract class LocalActivity extends AppCompatActivity {
         };
 
         filter = new IntentFilter();
-        filter.addAction(LocationService.ACTION_LOCATION_STATUS_CHANGE);
-//        filter.addAction(LocationService.ACTION_REQUEST_PERMISSION);
-        filter.addAction(LocationService.ACTION_REQUEST_RESOLUTION);
+        filter.addAction(TrackingService.ACTION_LOCATION_STATUS_CHANGE);
+//        filter.addAction(TrackingService.ACTION_REQUEST_PERMISSION);
+        filter.addAction(TrackingService.ACTION_REQUEST_RESOLUTION);
 
     }
 

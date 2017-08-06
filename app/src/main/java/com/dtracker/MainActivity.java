@@ -18,6 +18,7 @@ public class MainActivity extends LocalActivity {
     private final static int REQUEST_PERMISSION_LOCATION = 1;
 
     private DistanceTracker app;
+    private SharedPreferences prefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,16 +26,21 @@ public class MainActivity extends LocalActivity {
         setContentView(R.layout.activity_main);
 
         app = (DistanceTracker) getApplication();
+        prefs = PreferenceManager.getDefaultSharedPreferences(app);
 
         // update UI from a previous launch
-        if(PreferenceManager.getDefaultSharedPreferences(app)
-                .getBoolean(DistanceTracker.PREF_TRACKING, false)) {
+        if(prefs.getBoolean(DistanceTracker.PREF_TRACKING, false))
+            toggleTracking(true);
 
-            ToggleButton bTracking=(ToggleButton)findViewById(R.id.buttonTracking);
-            bTracking.setChecked(true);
+    }
 
-        }
+    @Override
+    protected void onResume() {
+        super.onResume();
 
+        // verify permissions before resuming a current tracking session
+        if(prefs.getBoolean(DistanceTracker.PREF_TRACKING, false))
+            verifyStartTrackingPermissions();
     }
 
     @Override
@@ -43,16 +49,18 @@ public class MainActivity extends LocalActivity {
         if (resolved) {
             startTracking();
         } else {
-            stopTracking();
-            ToggleButton toggleButton = (ToggleButton) findViewById(R.id.buttonTracking);
-            toggleButton.setChecked(false);
+            toggleTracking(false);
         }
+    }
+
+    private void toggleTracking(boolean track) {
+        ToggleButton toggleButton = (ToggleButton) findViewById(R.id.buttonTracking);
+        toggleButton.setChecked(track);
     }
 
     public void toggleTracking(View v) {
 
         ToggleButton toggleButton = (ToggleButton) v;
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(app);
         boolean allowed = prefs.getBoolean(DistanceTracker.PREF_ALLOW_TRACKING, false);
 
         if (!toggleButton.isChecked())
@@ -67,10 +75,10 @@ public class MainActivity extends LocalActivity {
     }
 
     private boolean verifyStartTrackingPermissions() {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(app);
         int check = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
         if (check != PackageManager.PERMISSION_GRANTED) {
             prefs.edit().putBoolean(DistanceTracker.PREF_ALLOW_TRACKING, false).apply();
+            toggleTracking(false);
             ActivityCompat.requestPermissions(this,
                     new String[] {Manifest.permission.ACCESS_FINE_LOCATION},
                     REQUEST_PERMISSION_LOCATION
@@ -84,7 +92,6 @@ public class MainActivity extends LocalActivity {
         DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(app);
                 switch (which) {
                     case DialogInterface.BUTTON_POSITIVE:
                         prefs.edit()
@@ -94,8 +101,7 @@ public class MainActivity extends LocalActivity {
                         break;
 
                     case DialogInterface.BUTTON_NEGATIVE:
-                        ToggleButton toggleButton = (ToggleButton) findViewById(R.id.buttonTracking);
-                        toggleButton.setChecked(false);
+                        toggleTracking(false);
                         break;
                 }
             }
@@ -112,16 +118,13 @@ public class MainActivity extends LocalActivity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(app);
         switch (requestCode) {
             case REQUEST_PERMISSION_LOCATION:
                 if (grantResults.length>0 && grantResults[0]==PackageManager.PERMISSION_GRANTED) {
                     if (!prefs.getBoolean(DistanceTracker.PREF_ALLOW_TRACKING, false))
                         showStartTrackingDialog();
                 } else {
-                    ToggleButton toggleButton = (ToggleButton) findViewById(R.id.buttonTracking);
-                    toggleButton.setChecked(false);
-                    prefs.edit().putBoolean(DistanceTracker.PREF_ALLOW_TRACKING, false).apply();
+                    toggleTracking(false);
                 }
                 break;
         }
@@ -129,17 +132,15 @@ public class MainActivity extends LocalActivity {
     }
 
     private void startTracking() {
-        PreferenceManager.getDefaultSharedPreferences(app).edit()
-                .putBoolean(DistanceTracker.PREF_TRACKING, true)
-                .apply();
-        app.resetTracking();
+        if (!prefs.getBoolean(DistanceTracker.PREF_TRACKING, false)) {
+            prefs.edit().putBoolean(DistanceTracker.PREF_TRACKING, true).apply();
+            app.resetTracking();
+        }
         app.startTracking();
     }
 
     private void stopTracking() {
-        PreferenceManager.getDefaultSharedPreferences(app).edit()
-                .putBoolean(DistanceTracker.PREF_TRACKING, false)
-                .apply();
+        prefs.edit().putBoolean(DistanceTracker.PREF_TRACKING, false).apply();
         app.stopTracking();
     }
 

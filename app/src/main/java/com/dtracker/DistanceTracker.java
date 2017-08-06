@@ -12,7 +12,6 @@ import android.util.TypedValue;
 
 import com.google.android.gms.location.LocationListener;
 
-import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -84,14 +83,14 @@ public class DistanceTracker extends Application implements LocationListener {
 
     public void startTracking() {
 //        LocalBroadcastManager.getInstance(this).registerReceiver(receiver,
-//                new IntentFilter(LocationService.ACTION_LOCATION_STATUS_CHANGE));//TODO add filters
-        Intent intent = new Intent(LocationService.ACTION_START_UPDATES, null, this, LocationService.class);
+//                new IntentFilter(TrackingService.ACTION_LOCATION_STATUS_CHANGE));//TODO add filters
+        Intent intent = new Intent(TrackingService.ACTION_START_UPDATES, null, this, TrackingService.class);
         startService(intent);
     }
 
     public void stopTracking() {
 //        LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver);
-        Intent intent = new Intent(LocationService.ACTION_STOP_UPDATES, null, this, LocationService.class);
+        Intent intent = new Intent(TrackingService.ACTION_STOP_UPDATES, null, this, TrackingService.class);
         startService(intent);
     }
 
