@@ -28,19 +28,15 @@ public class MainActivity extends LocalActivity {
         app = (DistanceTracker) getApplication();
         prefs = PreferenceManager.getDefaultSharedPreferences(app);
 
-        // update UI from a previous launch
-        if(prefs.getBoolean(DistanceTracker.PREF_TRACKING, false))
-            toggleTracking(true);
-
     }
 
     @Override
     protected void onResume() {
         super.onResume();
 
-        // verify permissions before resuming a current tracking session
+        // resume a current tracking session
         if(prefs.getBoolean(DistanceTracker.PREF_TRACKING, false))
-            verifyStartTrackingPermissions();
+            toggleTracking(true);
     }
 
     @Override
@@ -123,6 +119,8 @@ public class MainActivity extends LocalActivity {
                 if (grantResults.length>0 && grantResults[0]==PackageManager.PERMISSION_GRANTED) {
                     if (!prefs.getBoolean(DistanceTracker.PREF_ALLOW_TRACKING, false))
                         showStartTrackingDialog();
+                    else
+                        startTracking();
                 } else {
                     toggleTracking(false);
                 }
